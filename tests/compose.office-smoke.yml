@@ -1,0 +1,27 @@
+services:
+  backend:
+    environment:
+      OFFICE_SECRET: onlyoffice-isolated-integration-secret
+      OFFICE_BACKEND_ORIGIN: http://backend:3000
+      OFFICE_INTERNAL_ORIGIN: http://office
+      OFFICE_BROWSER_ORIGIN: http://ui:81
+  ui:
+    volumes:
+      - ../deployment/office.nginx.conf:/etc/nginx/conf.d/office.conf:ro
+  office:
+    extends:
+      file: ../deployment/compose.office.yml
+      service: office
+    networks: !override [default]
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1/healthcheck | grep -qx true"]
+      interval: 3s
+      timeout: 3s
+      retries: 70
+  browser-test:
+    depends_on:
+      office: {condition: service_healthy}
+      ui: {condition: service_started}
+    volumes:
+      - ./office.smoke.mjs:/test/office.smoke.mjs:ro
+    command: ["node", "--test", "--test-concurrency=1", "/test/ui.smoke.mjs", "/test/permissions.smoke.mjs", "/test/dragdrop.smoke.mjs", "/test/accounts.smoke.mjs", "/test/office.smoke.mjs"]

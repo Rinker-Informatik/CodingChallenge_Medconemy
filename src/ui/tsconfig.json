@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@spartan-ng/helm/button": [
+        "./src/ui-kit/button/src/index.ts"
+      ],
+      "@spartan-ng/helm/utils": [
+        "./src/ui-kit/utils/src/index.ts"
+      ],
+      "@spartan-ng/helm/card": [
+        "./src/ui-kit/card/src/index.ts"
+      ]
+    }
+  },
+  "angularCompilerOptions": {
+    "strictTemplates": true
+  }
+}

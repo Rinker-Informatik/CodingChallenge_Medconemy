@@ -1,0 +1,14 @@
+CREATE TABLE users (id uuid PRIMARY KEY, email text NOT NULL UNIQUE, password_hash text NOT NULL, is_admin boolean NOT NULL DEFAULT false, account_type text CONSTRAINT users_account_type_check CHECK (account_type IN ('internal','external')), is_active boolean NOT NULL DEFAULT true, session_version integer NOT NULL DEFAULT 0);
+CREATE TABLE folders (id uuid PRIMARY KEY, name text NOT NULL, parent_id uuid REFERENCES folders(id), owner_id uuid NOT NULL REFERENCES users(id));
+CREATE TABLE files (id uuid PRIMARY KEY, name text NOT NULL, folder_id uuid NOT NULL REFERENCES folders(id), owner_id uuid NOT NULL REFERENCES users(id), object_key text NOT NULL UNIQUE, content_type text NOT NULL, size bigint NOT NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), updated_by uuid REFERENCES users(id), version integer DEFAULT 1);
+CREATE TABLE shares (id uuid PRIMARY KEY, user_id uuid NOT NULL REFERENCES users(id), folder_id uuid REFERENCES folders(id), file_id uuid REFERENCES files(id), permission text NOT NULL CHECK (permission IN ('read','upload','write')), delete_files boolean NOT NULL DEFAULT false, delete_folders boolean NOT NULL DEFAULT false, granted_by uuid REFERENCES users(id), expires_at timestamptz, CHECK ((folder_id IS NULL) <> (file_id IS NULL)));
+CREATE UNIQUE INDEX share_folder_unique ON shares(user_id, folder_id) WHERE folder_id IS NOT NULL;
+CREATE UNIQUE INDEX share_file_unique ON shares(user_id, file_id) WHERE file_id IS NOT NULL;
+
+CREATE TABLE user_invitations (user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, token_hash text NOT NULL UNIQUE, expires_at timestamptz NOT NULL);
+CREATE TABLE file_edit_locks (file_id uuid PRIMARY KEY REFERENCES files(id) ON DELETE CASCADE, user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE, token uuid NOT NULL, expires_at timestamptz NOT NULL);
+CREATE TABLE file_versions (id uuid PRIMARY KEY, file_id uuid NOT NULL REFERENCES files(id) ON DELETE CASCADE, object_key text NOT NULL, content_type text NOT NULL, size bigint NOT NULL, version integer, saved_at timestamptz NOT NULL DEFAULT now(), saved_by uuid REFERENCES users(id));
+CREATE TABLE trash_batches (id uuid PRIMARY KEY, kind text NOT NULL CHECK(kind IN ('file','folder')), target_id uuid NOT NULL, parent_id uuid, name text NOT NULL, deleted_by uuid NOT NULL REFERENCES users(id), deleted_at timestamptz NOT NULL DEFAULT now());
+ALTER TABLE folders ADD COLUMN trash_id uuid REFERENCES trash_batches(id);
+ALTER TABLE files ADD COLUMN trash_id uuid REFERENCES trash_batches(id);
+CREATE TABLE activity_events (id uuid PRIMARY KEY, object_type text NOT NULL CHECK(object_type IN ('file','folder')), object_id uuid NOT NULL, object_name text NOT NULL, action text NOT NULL, actor_id uuid NOT NULL REFERENCES users(id), occurred_at timestamptz NOT NULL DEFAULT now());

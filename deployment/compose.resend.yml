@@ -1,0 +1,11 @@
+# Optional overlay; provide RESEND_API_KEY and RESEND_FROM via a private environment file.
+services:
+  backend:
+    environment:
+      SMTP_HOST: smtp.resend.com
+      SMTP_PORT: "465"
+      SMTP_SECURE: "true"
+      SMTP_REQUIRE_TLS: "false"
+      SMTP_USER: resend
+      SMTP_PASSWORD: ${RESEND_API_KEY:?RESEND_API_KEY fehlt}
+      SMTP_FROM: ${RESEND_FROM:?RESEND_FROM fehlt}

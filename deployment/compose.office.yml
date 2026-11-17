@@ -1,0 +1,29 @@
+# Add after compose.ui.yml. Relative paths use src/backend as the Compose base.
+services:
+  backend:
+    environment:
+      OFFICE_SECRET: ${OFFICE_SECRET:?OFFICE_SECRET setzen}
+      OFFICE_BACKEND_ORIGIN: http://backend:3000
+      OFFICE_INTERNAL_ORIGIN: http://office
+      OFFICE_BROWSER_ORIGIN: ${OFFICE_BROWSER_ORIGIN:-http://localhost:8082}
+    networks: [default, editor]
+  ui:
+    ports: ["127.0.0.1:8082:81"]
+    volumes:
+      - ../../deployment/office.nginx.conf:/etc/nginx/conf.d/office.conf:ro
+    networks: [default, editor]
+  office:
+    image: onlyoffice/documentserver@sha256:ca17889f10b11141cc6441836aebdd2835cf3e1b49681b2fd6e155c94b7850b3
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${OFFICE_SECRET:?OFFICE_SECRET setzen}
+      JWT_HEADER: X-Office-Token
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+      ALLOW_META_IP_ADDRESS: "false"
+      WELCOME_PAGE_ENABLED: "false"
+      EXAMPLE_ENABLED: "false"
+      PLUGINS_ENABLED: "false"
+    networks: [editor]
+networks:
+  editor:
+    internal: true

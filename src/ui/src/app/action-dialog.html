@@ -1,0 +1,199 @@
+<form (submit)="submit($event)">
+  @let item = action();
+  <h2 id="dialog-title">{{ titles[item.kind] }}</h2>
+  <fieldset [disabled]="busy()">
+    @switch (item.kind) {
+      @case ('folder') {
+        <label>Ordnername<input name="name" required maxlength="255" autocomplete="off"></label>
+      }
+      @case ('rename') {
+        <label>Dateiname<input name="name" required maxlength="255" [value]="item.file.name"></label>
+      }
+      @case ('upload') {
+        <label>Datei für „{{ item.folder.name }}“<input type="file" name="file" required></label>
+        <p class="muted">Maximal 10 MiB pro Datei.</p>
+      }
+      @case ('edit-text') {
+        <p class="muted">{{ item.file.name }} · UTF-8 · maximal 10 MiB</p>
+        <label>Textinhalt<textarea name="text" [value]="item.text" rows="18" spellcheck="false"></textarea></label>
+      }
+      @case ('versions') {
+        <p>Frühere Versionen von „{{ item.file.name }}“</p>
+        @if (versions().length) {
+          <ul class="accounts">
+            @for (version of versions(); track version.id) {
+              <li class="account-row"><span>Version {{ version.version ?? 'unbekannt' }} · {{ formatDate(version.saved_at) }} · {{ version.saved_by_email ?? 'Unbekannt' }}</span>
+                <button hlmBtn type="button" variant="outline" (click)="downloadVersion.emit(version)">Herunterladen</button>
+                @if (item.canRestore) { <button hlmBtn type="button" variant="outline" (click)="restoreVersion.emit(version)">Wiederherstellen</button> }
+              </li>
+            }
+          </ul>
+        } @else { <p class="muted">Es gibt noch keine früheren Versionen.</p> }
+      }
+      @case ('replace') {
+        <label>Neuer Inhalt für „{{ item.file.name }}“<input type="file" name="file" required></label>
+        <p class="muted">Maximal 10 MiB pro Datei.</p>
+      }
+      @case ('move') {
+        <label>Zielordner<select name="folderId" required>
+          <option value="" disabled selected>Ziel auswählen</option>
+          @for (folder of folders(); track folder.id) {
+            @if (folder.id !== item.file.folder_id) { <option [value]="folder.id">{{ folder.name }}</option> }
+          }
+        </select></label>
+      }
+      @case ('copy') {
+        <label>Zielordner<select name="folderId" required>
+          <option value="" disabled selected>Ziel auswählen</option>
+          @for (folder of folders(); track folder.id) { <option [value]="folder.id">{{ folder.name }}</option> }
+        </select></label>
+        <label>Name der Kopie<input name="name" maxlength="255" [value]="item.file.name"></label>
+      }
+      @case ('delete') { <p>„{{ item.file.name }}“ für 30 Tage in den Papierkorb verschieben?</p> }
+      @case ('delete-folder') { <p>„{{ item.folder.name }}“ und alle enthaltenen Ordner und Dateien für 30 Tage in den Papierkorb verschieben?</p> }
+      @case ('share') {
+        <p class="muted">{{ item.target.name }}</p>
+        <h3>Bestehende direkte Freigaben</h3>
+        @if (objectShares().length) {
+          <ul class="accounts">
+            @for (share of objectShares(); track share.id) {
+              <li class="account-row"><div><strong>{{ share.email }}</strong><br><small>{{ permissions[share.permission] }}{{ share.deleteFiles ? ' · Dateien löschen' : '' }}{{ share.deleteFolders ? ' · Ordner löschen' : '' }}{{ share.expiresAt ? ' · bis ' + formatDate(share.expiresAt) : '' }}</small></div>
+                <div class="share-actions"><button hlmBtn type="button" variant="outline" (click)="changeView.emit({ kind: 'object-share-edit', target: item.target, isFolder: item.isFolder, share })">Ändern</button>
+                <button hlmBtn type="button" variant="outline" (click)="changeView.emit({ kind: 'object-share-revoke', target: item.target, isFolder: item.isFolder, share })">Widerrufen</button></div>
+              </li>
+            }
+          </ul>
+        } @else { <p class="muted">Noch keine direkten Freigaben.</p> }
+        <h3>Neue Freigabe</h3>
+        <label>Konto<select name="userId" required>
+          <option value="" disabled selected>Konto auswählen</option>
+          @for (user of users(); track user.id) { @if (!hasObjectShare(user.id)) { <option [value]="user.id">{{ user.email }}</option> } }
+        </select></label>
+        <ng-container [ngTemplateOutlet]="rightsFields" [ngTemplateOutletContext]="{ isFolder: item.isFolder }" />
+        @if (item.isFolder) {
+          <p class="muted">Die Freigabe gilt auch für Unterordner und Dateien. Das Konto wird per E-Mail benachrichtigt.</p>
+        }
+      }
+      @case ('object-share-edit') {
+        <p>„{{ item.target.name }}“ für {{ item.share.email }}</p>
+        <ng-container [ngTemplateOutlet]="rightsFields" [ngTemplateOutletContext]="{ isFolder: item.isFolder, share: item.share }" />
+      }
+      @case ('object-share-revoke') {
+        <p>Die Freigabe für „{{ item.target.name }}“ an {{ item.share.email }} widerrufen?</p>
+        <p class="muted">Andere Freigaben und Rechte aus übergeordneten Ordnern gelten weiterhin.</p>
+      }
+      @case ('accounts') {
+        <ul class="accounts">
+          @for (user of users(); track user.id) {
+            <li class="account-row">
+              <div><strong>{{ user.email }}</strong><br><small>{{ user.account_type ? accountTypes[user.account_type] : 'Nicht zugeordnet' }} · {{ user.is_admin ? 'Admin' : 'Mitglied' }}{{ user.is_active === false ? ' · Deaktiviert' : '' }}</small></div>
+              <button hlmBtn variant="outline" type="button" (click)="invite.emit(user)" [attr.aria-label]="'Passwort für ' + user.email + ' zurücksetzen'">Passwort zurücksetzen</button>
+              <button hlmBtn variant="outline" type="button" (click)="changeView.emit({ kind: 'account-access', account: user })"
+                [attr.aria-label]="'Freigaben für ' + user.email + ' verwalten'">Verwalten</button>
+            </li>
+          }
+        </ul>
+        <label>E-Mail für neues Konto<input type="email" name="email" maxlength="254" required></label>
+        <p class="muted">Das Konto erhält einen Link, um ein eigenes Passwort festzulegen.</p>
+        <label>Kontotyp<select name="accountType"><option value="internal">Intern</option><option value="external">Extern</option></select></label>
+        <label class="check"><input type="checkbox" name="isAdmin"> Administrator</label>
+      }
+      @case ('account-access') {
+        <p><strong>{{ item.account.email }}</strong> · {{ item.account.is_admin ? 'Admin' : 'Mitglied' }}</p>
+        <p>Status: {{ item.account.is_active === false ? 'Deaktiviert' : 'Aktiv' }}</p>
+        <div class="share-actions">
+          <button hlmBtn type="button" variant="outline" (click)="changeActive.emit(item.account)">{{ item.account.is_active === false ? 'Konto aktivieren' : 'Konto deaktivieren' }}</button>
+          <button hlmBtn type="button" variant="outline" (click)="revokeSessions.emit(item.account)">Sitzungen widerrufen</button>
+        </div>
+        @if (item.account.is_admin) { <p class="muted">Administratoren haben unabhängig von einzelnen Freigaben Vollzugriff.</p> }
+        @if (!item.account.is_admin && item.account.account_type === 'internal') {
+          <p class="muted">Als Administrator erhält dieses Konto Vollzugriff auf alle Dateien und die Nutzerverwaltung.</p>
+          <button hlmBtn type="button" variant="outline" (click)="promote.emit(item.account)">Zum Administrator machen</button>
+        }
+        <label>Kontotyp<select name="accountType" required #currentType
+          [value]="accountType()" (change)="accountType.set(currentType.value)">
+          <option value="" disabled>Nicht zugeordnet</option>
+          <option value="internal">Intern</option>
+          <option value="external">Extern</option>
+        </select></label>
+        <div class="account-row">
+          <strong>Direkte Freigaben</strong>
+          <button hlmBtn variant="outline" type="button" (click)="chosenFolder.set(false); changeView.emit({ kind: 'account-grant', account: item.account })">Freigabe hinzufügen</button>
+        </div>
+        <p class="muted">Ordnerfreigaben gelten auch für Unterordner und enthaltene Dateien.</p>
+        @if (shares().length) {
+          <ul class="accounts">
+            @for (share of shares(); track share.id) {
+              <li class="account-row">
+                <div><strong>{{ targetNames().get(share.folderId ?? share.fileId ?? '') ?? share.name }}</strong><br>
+                  <small>{{ share.folderId ? 'Ordner' : 'Datei' }} · {{ permissions[share.permission] }}{{ share.deleteFiles ? ' · Dateien löschen' : '' }}{{ share.deleteFolders ? ' · Ordner löschen' : '' }}{{ share.expiresAt ? ' · bis ' + formatDate(share.expiresAt) : '' }}</small>
+                </div>
+                <div class="share-actions">
+                  <button hlmBtn size="sm" variant="outline" type="button" (click)="changeView.emit({ kind: 'account-share-edit', account: item.account, share })">Ändern</button>
+                  <button hlmBtn size="sm" variant="outline" type="button" (click)="changeView.emit({ kind: 'account-share-revoke', account: item.account, share })">Widerrufen</button>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else { <p class="muted">Für dieses Konto gibt es keine direkten Freigaben.</p> }
+      }
+      @case ('account-grant') {
+        <p>{{ item.account.email }}</p>
+        <label>Datei oder Ordner<select name="target" required #target (change)="chosenFolder.set(target.value.startsWith('folder:'))">
+          <option value="" disabled selected>Objekt auswählen</option>
+          <optgroup label="Ordner">
+            @for (folder of targets().folders; track folder.id) { <option [value]="'folder:' + folder.id">{{ folder.label }}</option> }
+          </optgroup>
+          <optgroup label="Dateien">
+            @for (file of targets().files; track file.id) { <option [value]="'file:' + file.id">{{ file.label }}</option> }
+          </optgroup>
+        </select></label>
+        <ng-container [ngTemplateOutlet]="rightsFields" [ngTemplateOutletContext]="{ isFolder: chosenFolder() }" />
+        @if (chosenFolder()) { <p class="muted">Die Freigabe gilt auch für Nachfahren und löst eine E-Mail aus.</p> }
+      }
+      @case ('account-share-edit') {
+        <p>„{{ item.share.name }}“ für {{ item.account.email }}</p>
+        <ng-container [ngTemplateOutlet]="rightsFields"
+          [ngTemplateOutletContext]="{ isFolder: !!item.share.folderId, share: item.share }" />
+      }
+      @case ('account-share-revoke') {
+        <p>Die Freigabe für „{{ item.share.name }}“ an {{ item.account.email }} widerrufen?</p>
+        <p class="muted">Andere Freigaben und Rechte aus übergeordneten Ordnern gelten weiterhin.</p>
+      }
+      @case ('revoke') {
+        <label>Freigabe-ID<input name="id" required autocomplete="off" pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"></label>
+        <p class="muted">Die ID wird beim Erteilen einer Freigabe angezeigt.</p>
+      }
+    }
+    @if (notice()) { <p class="success" role="status">{{ notice() }}</p> }
+    @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+    <footer>
+      @if (item.kind === 'account-access') {
+        <button hlmBtn type="button" variant="outline" (click)="changeView.emit({ kind: 'accounts' })">Zurück zu den Konten</button>
+      } @else if ('account' in item) {
+        <button hlmBtn type="button" variant="outline" (click)="changeView.emit({ kind: 'account-access', account: item.account })">Zurück zum Konto</button>
+      }
+      @if (item.kind === 'object-share-edit' || item.kind === 'object-share-revoke') {
+        <button hlmBtn type="button" variant="outline" (click)="changeView.emit({ kind: 'share', target: item.target, isFolder: item.isFolder })">Zurück zur Freigabe</button>
+      }
+      <button hlmBtn type="button" variant="outline" (click)="close.emit()">Abbrechen</button>
+      @if (item.kind !== 'versions') { <button hlmBtn type="submit" [variant]="item.kind === 'delete' || item.kind === 'delete-folder' || item.kind === 'account-share-revoke' ? 'destructive' : 'default'">
+        {{ busy() ? 'Bitte warten …' : item.kind === 'accounts' ? 'Konto anlegen' : item.kind === 'account-access' ? 'Kontotyp speichern' : item.kind === 'edit-text' ? 'Speichern' : titles[item.kind] }}
+      </button> }
+    </footer>
+  </fieldset>
+</form>
+
+
+<ng-template #rightsFields let-isFolder="isFolder" let-share="share">
+  <label>Berechtigung<select name="permission" [value]="selectedPermission()" (change)="selectedPermission.set($any($event.target).value)">
+    <option value="read">Lesen</option>
+    <option value="upload">Lesen, hochladen und eigene Dateien bearbeiten</option>
+    <option value="write">Lesen und schreiben, auch verschieben und kopieren</option>
+  </select></label>
+  <label class="check"><input type="checkbox" name="deleteFiles" [checked]="selectedDeleteFiles()" (change)="selectedDeleteFiles.set($any($event.target).checked)"> Dateien ausdrücklich zum Löschen freigeben</label>
+  @if (isFolder) {
+    <label class="check"><input type="checkbox" name="deleteFolders" [checked]="selectedDeleteFolders()" (change)="selectedDeleteFolders.set($any($event.target).checked)"> Ordner löschen</label>
+  }
+  <label>Gültig bis (optional)<input type="datetime-local" name="expiresAt" [value]="selectedExpiry()" (change)="selectedExpiry.set($any($event.target).value)"></label>
+</ng-template>

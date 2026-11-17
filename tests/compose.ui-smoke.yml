@@ -1,0 +1,19 @@
+services:
+  ui:
+    build: ../src/ui
+    depends_on: [backend]
+  browser-test:
+    profiles: [test]
+    build:
+      context: .
+      dockerfile: Dockerfile.ui-smoke
+    environment:
+      UI_URL: http://ui
+      MAIL_URL: http://mail:8025
+    volumes:
+      - ./ui.smoke.mjs:/test/ui.smoke.mjs:ro
+      - ./permissions.smoke.mjs:/test/permissions.smoke.mjs:ro
+      - ./dragdrop.smoke.mjs:/test/dragdrop.smoke.mjs:ro
+      - ./accounts.smoke.mjs:/test/accounts.smoke.mjs:ro
+      - ./invitation-helpers.mjs:/test/invitation-helpers.mjs:ro
+    command: ["node", "--test", "--test-concurrency=1", "/test/ui.smoke.mjs", "/test/permissions.smoke.mjs", "/test/dragdrop.smoke.mjs", "/test/accounts.smoke.mjs"]

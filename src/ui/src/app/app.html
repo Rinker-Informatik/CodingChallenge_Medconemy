@@ -1,0 +1,233 @@
+@if (invitationPage()) {
+  <main class="login">
+    <div class="login-brand brand"><span class="brand-icon"><ng-icon name="lucideFiles" /></span> Medconemy</div>
+    <section hlmCard class="login-card">
+      <h1>Passwort festlegen</h1>
+      @if (invitationToken()) {
+        <p class="muted">Wähle ein Passwort mit 12 bis 72 Zeichen.</p>
+        <form (submit)="setInvitationPassword($event)">
+          <fieldset [disabled]="busy()">
+            <label>Neues Passwort<input type="password" name="password" autocomplete="new-password" minlength="12" maxlength="72" aria-describedby="password-requirements" (input)="newPassword.set($any($event.target).value)" required></label>
+            <ul id="password-requirements" class="password-requirements" aria-label="Passwortbedingungen" aria-live="polite">
+              <li [class.met]="passwordLengthValid()"><span aria-hidden="true">{{ passwordLengthValid() ? '✓' : '○' }}</span> 12 bis 72 Zeichen <span class="requirement-status">{{ passwordLengthValid() ? 'Erfüllt' : 'Noch offen' }}</span></li>
+              <li [class.met]="passwordsMatch()"><span aria-hidden="true">{{ passwordsMatch() ? '✓' : '○' }}</span> Passwörter stimmen überein <span class="requirement-status">{{ passwordsMatch() ? 'Erfüllt' : 'Noch offen' }}</span></li>
+            </ul>
+            <label>Passwort bestätigen<input type="password" name="confirm" autocomplete="new-password" minlength="12" maxlength="72" (input)="passwordConfirmation.set($any($event.target).value)" required></label>
+            @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+            <button hlmBtn type="submit">Passwort speichern</button>
+          </fieldset>
+        </form>
+      } @else { <p class="error" role="alert">Der Einladungslink ist ungültig.</p> }
+    </section>
+  </main>
+} @else if (office(); as opened) {
+  <app-office-editor [session]="opened.session" [name]="opened.name" (done)="closeOffice($event)" />
+} @else if (user(); as account) {
+  <header class="topbar">
+    <div class="brand"><span class="brand-icon"><ng-icon name="lucideFiles" /></span> Medconemy</div>
+    <div class="session">
+      <span class="account-email">{{ account.email }}</span>
+      <button hlmBtn variant="ghost" (click)="signOut()" [disabled]="busy()"><ng-icon name="lucideLogOut" /> Abmelden</button>
+    </div>
+  </header>
+  <div class="shell">
+    <aside class="sidebar">
+      <nav aria-label="Ordnerbaum">
+        <h2>Arbeitsbereich</h2>
+        <button class="tree-link" [class.active]="page() === 'files' && currentId() === null" [attr.aria-current]="page() === 'files' && currentId() === null ? 'page' : null" (click)="navigate(null)"><ng-icon name="lucideFiles" /> Übersicht</button>
+        <button class="tree-link" [class.active]="page() === 'trash'" [disabled]="busy()" (click)="showTrash()">Papierkorb</button>
+        <button class="tree-link" [class.active]="page() === 'activity'" [disabled]="busy()" (click)="showActivity()">Aktivitätsprotokoll</button>
+        @for (item of tree(); track item.folder.id) {
+          <button #treeFolder class="tree-link" [class.drop-target]="moveTarget() === treeFolder"
+            (dragover)="dragOverFolder($event, item.folder)" (dragleave)="leaveFolder($event)" (drop)="dropOnFolder($event, item.folder)"
+            [class.active]="page() === 'files' && currentId() === item.folder.id" [attr.aria-current]="page() === 'files' && currentId() === item.folder.id ? 'page' : null"
+            [title]="item.label" [style.padding-inline-start.rem]="0.75 + item.depth * 0.75" (click)="navigate(item.folder.id)">
+            <ng-icon [name]="currentId() === item.folder.id ? 'lucideFolderOpen' : 'lucideFolder'" /><span>{{ item.folder.name }}</span>
+          </button>
+        }
+      </nav>
+      @if (account.is_admin) {
+        <nav class="admin-nav" aria-label="Verwaltung">
+          <h2>Verwaltung</h2>
+          <button class="tree-link" [class.active]="page() === 'accounts'" [attr.aria-current]="page() === 'accounts' ? 'page' : null" [disabled]="busy()" (click)="showAccounts()"><ng-icon name="lucideUsers" /> Nutzerverwaltung</button>
+          <button class="tree-link" [disabled]="busy()" (click)="openAction({ kind: 'revoke' })">Freigabe widerrufen</button>
+        </nav>
+      }
+    </aside>
+    @if (page() === 'activity') {
+      <main class="workspace">
+        <h1>Aktivitätsprotokoll</h1>
+        <p class="muted">Aktivitäten der letzten 365 Tage.</p>
+        @if (error()) { <p class="error feedback" role="alert">{{ error() }}</p> }
+        @for (event of activity(); track event.id) {
+          <div class="account-row"><div><strong>{{ event.action }} · {{ event.object_name }}</strong><br><small>{{ event.actor_email ?? 'Unbekannt' }} · {{ formatDate(event.occurred_at) }}</small></div></div>
+        } @empty { <p class="muted">Keine sichtbaren Aktivitäten.</p> }
+      </main>
+    } @else if (page() === 'trash') {
+      <main class="workspace">
+        <h1>Papierkorb</h1>
+        <p class="muted">Gelöschte Elemente können 30 Tage wiederhergestellt werden.</p>
+        @if (error()) { <p class="error feedback" role="alert">{{ error() }}</p> }
+        @if (notice()) { <p class="success feedback" role="status">{{ notice() }}</p> }
+        @for (item of trash(); track item.id) {
+          <div class="account-row"><div><strong>{{ item.name }}</strong><br><small>{{ item.kind === 'folder' ? 'Ordner' : 'Datei' }} · gelöscht {{ formatDate(item.deleted_at) }} · verfügbar bis {{ formatDate(item.expires_at) }}</small></div>
+            <button hlmBtn variant="outline" [disabled]="busy()" (click)="restoreTrash(item.id)">Wiederherstellen</button></div>
+        } @empty { <p class="muted">Der Papierkorb ist leer.</p> }
+      </main>
+    } @else if (page() === 'accounts') {
+      <main class="workspace account-page">
+        @if (error()) { <p class="error feedback" role="alert">{{ error() }}</p> }
+        @if (notice()) { <p class="success feedback" role="status">{{ notice() }}</p> }
+        <app-action-dialog [action]="{ kind: 'accounts' }" [users]="users()" [busy]="busy()"
+          (changeView)="openAction($event)" (invite)="sendInvitation($event)" (submitAction)="createAccount($event)" (close)="navigate(null)" />
+      </main>
+    } @else {
+    <main class="workspace" (dragover)="dragOverWorkspace($event)" (dragleave)="leaveWorkspace($event)" (drop)="dropOnWorkspace($event)">
+      <nav class="breadcrumbs" aria-label="Ordnerpfad">
+        <button (click)="navigate(null)">Übersicht</button>
+        @for (folder of crumbs(); track folder.id) {
+          <ng-icon name="lucideChevronRight" />
+          <button [attr.aria-current]="$last ? 'page' : null" (click)="navigate(folder.id)">{{ folder.name }}</button>
+        }
+      </nav>
+      <div class="workspace-heading">
+        <div><h1>{{ current()?.name ?? 'Dateien und Ordner' }}</h1>
+          <p class="muted">{{ current() ? 'Inhalte dieses Ordners' : 'Deine sichtbaren Bereiche und Dateien ohne sichtbaren Ordner' }}</p>
+        </div>
+        <div class="toolbar">
+          <button hlmBtn variant="outline" size="icon" aria-label="Aktualisieren" title="Aktualisieren" [disabled]="busy()" (click)="refresh()"><ng-icon name="lucideRefreshCw" /></button>
+          @if (current()?.rights?.write || (!current() && account.is_admin)) {
+            <button hlmBtn variant="outline" [disabled]="busy()" (click)="openAction({ kind: 'folder', parentId: currentId() })"><ng-icon name="lucideFolderPlus" /> Neuer Ordner</button>
+          }
+          @if (current(); as folder) {
+            @if (folder.rights.upload) {
+              <button hlmBtn [disabled]="busy()" (click)="openAction({ kind: 'upload', folder })"><ng-icon name="lucideUpload" /> Hochladen</button>
+            }
+          }
+        </div>
+      </div>
+      @if (error()) { <p class="error feedback" role="alert">{{ error() }}</p> }
+      @if (notice()) { <p class="success feedback" role="status">{{ notice() }}</p> }
+      @if (current()?.rights?.upload) {
+        <div class="upload-drop-zone" [class.drop-target]="uploadOver()">
+          <ng-icon name="lucideUpload" />
+          <span>{{ uploadOver() ? 'Dateien zum Hochladen loslassen' : 'Dateien hier ablegen, um sie hochzuladen' }}</span>
+        </div>
+      }
+      <section class="listing" aria-label="Dateien und Ordner" [attr.aria-busy]="busy()">
+        <div class="list-toolbar">
+          <label class="search"><ng-icon name="lucideSearch" /><input aria-label="Alle Dateien und Ordner durchsuchen" placeholder="Alle Inhalte durchsuchen …" [value]="search()" (input)="search.set($any($event.target).value)"></label>
+          <label>Typ <select aria-label="Dateityp" [value]="searchType()" (change)="searchType.set($any($event.target).value)"><option value="">Alle</option><option value="word">Word</option><option value="excel">Tabelle</option><option value="slides">Präsentation</option><option value="pdf">PDF</option><option value="image">Bild</option><option value="archive">Archiv</option><option value="audio">Audio</option><option value="video">Video</option><option value="generic">Andere</option></select></label>
+          <label>Geändert ab <input aria-label="Geändert ab" type="date" [value]="searchSince()" (input)="searchSince.set($any($event.target).value)"></label>
+          <label>Geändert von <input aria-label="Geändert von" [value]="searchEditor()" (input)="searchEditor.set($any($event.target).value)"></label>
+          <span class="muted">{{ itemCount() }} {{ itemCount() === 1 ? 'Element' : 'Elemente' }}</span>
+        </div>
+        <div class="list-head"><span>Name</span><span>Typ</span><span>Größe</span><span>Aktionen</span></div>
+        @for (folder of listing().folders; track folder.id) {
+          <div #listFolder class="row" [class.drop-target]="moveTarget() === listFolder"
+            (dragover)="dragOverFolder($event, folder)" (dragleave)="leaveFolder($event)" (drop)="dropOnFolder($event, folder)">
+            <button class="entry-name" (click)="navigate(folder.id)"><span class="file-icon folder"><ng-icon name="lucideFolder" /></span><span>{{ folder.name }}</span></button>
+            <span class="entry-meta muted">Ordner</span><span class="entry-meta muted">–</span>
+            <div class="row-actions">
+              @if (account.is_admin || account.account_type === 'internal' || folder.rights.deleteFolders) {
+                <details appFitActionMenu><summary>Aktionen</summary><div class="action-menu">
+                  @if (account.is_admin || account.account_type === 'internal') { <button [disabled]="busy()" (click)="openAction({ kind: 'share', target: folder, isFolder: true })">Freigeben</button> }
+                  @if (folder.rights.deleteFolders) { <button class="delete-text" [disabled]="busy()" (click)="openAction({ kind: 'delete-folder', folder })">Löschen</button> }
+                </div></details>
+              }
+            </div>
+          </div>
+        }
+        @for (file of listing().files; track file.id) {
+          @let type = fileType(file);
+          @let rights = fileActions(file, account, folders());
+          <div class="row">
+            <div class="entry-name" [class.draggable]="rights.move" [draggable]="rights.move && !busy()"
+              (dragstart)="startFileDrag($event, file)" (dragend)="endFileDrag()"><span [class]="'file-icon ' + type.key"><ng-icon [name]="type.icon" /></span><span>{{ file.name }}<small class="mobile-meta">{{ type.label }} · {{ formatSize(file.size) }}</small>@if (searching()) { <small> · {{ filePath(file) }}</small> }</span></div>
+            <span class="entry-meta muted">{{ type.label }}</span><span class="entry-meta muted">{{ formatSize(file.size) }}</span>
+            <div class="row-actions">
+              <div class="file-info">
+                <button type="button" class="info-button" [attr.aria-label]="'Informationen zu ' + file.name" [attr.aria-describedby]="'file-info-' + file.id"><ng-icon name="lucideInfo" /></button>
+                <div class="file-info-panel" role="tooltip" [id]="'file-info-' + file.id">
+                  <strong>Dateiinformationen</strong>
+                  <dl>
+                    <dt>Erstellt</dt><dd>{{ formatDate(file.created_at) }}</dd>
+                    <dt>Erstellt von</dt><dd>{{ file.created_by_email ?? 'Nicht verfügbar' }}</dd>
+                    <dt>Zuletzt geändert</dt><dd>{{ formatDate(file.updated_at) }}</dd>
+                    <dt>Geändert von</dt><dd>{{ file.updated_by_email ?? 'Nicht verfügbar' }}</dd>
+                    <dt>Inhaltsversion</dt><dd>{{ file.version ?? 'Nicht verfügbar' }}</dd>
+                    @if (file.locked_by_email) { <dt>Wird bearbeitet von</dt><dd>{{ file.locked_by_email }}</dd> }
+                  </dl>
+                </div>
+              </div>
+              @if (file.locked_by_email) { <span class="muted" [title]="'Wird bearbeitet von ' + file.locked_by_email">🔒 {{ file.locked_by_email }}</span> }
+              <button hlmBtn size="icon" variant="ghost" [attr.aria-label]="file.name + ' herunterladen'" title="Herunterladen" [disabled]="busy()" (click)="download(file)"><ng-icon name="lucideArrowDownToLine" /></button>
+                <details #fileMenu appFitActionMenu><summary role="button" [attr.aria-expanded]="fileMenu.open" [attr.aria-label]="'Aktionen für Datei ' + file.name">Aktionen</summary><div class="action-menu">
+                  @if (officeEnabled() && canOpenOffice(file, account)) {
+                    <button [disabled]="busy()" (click)="startOffice(file)">Im Browser bearbeiten</button>
+                  }
+                  @if (rights.edit) {
+                    @if (file.name.toLowerCase().endsWith('.txt')) {
+                      <button [disabled]="busy()" (click)="editText(file)">Text bearbeiten</button>
+                    }
+                    <button [disabled]="busy()" (click)="openAction({ kind: 'rename', file })">Umbenennen</button>
+                    <button [disabled]="busy()" (click)="openAction({ kind: 'replace', file })">Inhalt ersetzen</button>
+                  }
+                  <button [disabled]="busy()" (click)="openAction({ kind: 'versions', file, canRestore: rights.edit })">Versionsverlauf</button>
+                  @if (rights.move) { <button [disabled]="busy()" (click)="openAction({ kind: 'move', file })">Verschieben</button> }
+                  @if (rights.copy) { <button [disabled]="busy()" (click)="openAction({ kind: 'copy', file })">Kopieren</button> }
+                  @if (account.is_admin || account.account_type === 'internal') { <button [disabled]="busy()" (click)="openAction({ kind: 'share', target: file, isFolder: false })">Freigeben</button> }
+                  @if (rights.delete) { <button class="delete-text" [disabled]="busy()" (click)="openAction({ kind: 'delete', file })">Löschen</button> }
+                </div></details>
+            </div>
+          </div>
+        }
+        @if (!listing().folders.length && !listing().files.length) {
+          <div class="empty"><span class="file-icon folder"><ng-icon name="lucideFolderOpen" /></span><strong>{{ searching() ? 'Keine Treffer' : 'Hier ist noch nichts' }}</strong>
+            <p class="muted">{{ searching() ? 'Passe die Suche oder Filter an.' : current() ? 'Dieser Ordner enthält keine sichtbaren Elemente.' : 'Freigegebene Inhalte und eigene Dateien erscheinen hier.' }}</p></div>
+        }
+      </section>
+    </main>
+    }
+  </div>
+} @else if (restoring()) {
+  <main class="login"><p>Die Sitzung wird wiederhergestellt …</p></main>
+} @else {
+  <main class="login">
+    <div class="login-brand brand"><span class="brand-icon"><ng-icon name="lucideFiles" /></span> Medconemy</div>
+    <section hlmCard class="login-card">
+      <h1>Anmelden</h1>
+      <p class="muted">Melde dich mit deinem Konto für den Dateiaustausch an.</p>
+      @if (notice()) { <p class="success" role="status">{{ notice() }}</p> }
+      <form (submit)="login($event)">
+        <fieldset [disabled]="busy()">
+          <label>E-Mail<input type="email" name="email" autocomplete="username" required></label>
+          <label>Passwort<input type="password" name="password" autocomplete="current-password" required></label>
+          @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+          <button hlmBtn type="submit">{{ busy() ? 'Anmeldung läuft …' : 'Anmelden' }}</button>
+        </fieldset>
+      </form>
+    </section>
+  </main>
+}
+<dialog #dialog [class.text-editor]="action()?.kind === 'edit-text'" aria-labelledby="dialog-title" (cancel)="$event.preventDefault(); !busy() && closeAction()">
+  @if (action(); as item) {
+    <app-action-dialog [action]="item" [users]="users()" [folders]="writable()" [shares]="managedShares()" [objectShares]="objectShares()" [versions]="versions()" [targets]="shareTargets()" [busy]="busy()" [error]="dialogError()" [notice]="dialogNotice()"
+      (close)="closeAction()" (changeView)="openAction($event)" (promote)="promoteAccount($event)" (changeActive)="changeAccountActive($event)" (revokeSessions)="revokeAccountSessions($event)" (restoreVersion)="restoreVersion($event)" (downloadVersion)="downloadVersion($event)" (submitAction)="apply($event)" />
+  }
+</dialog>
+<dialog #conflictDialog aria-labelledby="upload-conflict-title" (cancel)="$event.preventDefault(); chooseUploadConflict('cancel')">
+  @if (uploadConflict(); as conflict) {
+    <h2 id="upload-conflict-title">Dateiname existiert bereits</h2>
+    <p>Im Zielordner gibt es bereits „{{ conflict.name }}“. Wie möchtest du fortfahren?</p>
+    <label>Neuer Dateiname <input aria-label="Neuer Dateiname" maxlength="255" [value]="conflictName()" (input)="conflictName.set($any($event.target).value)"></label>
+    <button hlmBtn type="button" variant="outline" (click)="chooseUploadConflict('rename')">Umbenennen und hochladen</button>
+    <label>Datei zum Ersetzen <select aria-label="Datei zum Ersetzen" [value]="conflictTarget()" (change)="conflictTarget.set($any($event.target).value)">
+      @if (conflict.candidates.length > 1) { <option value="">Datei auswählen</option> }
+      @for (file of conflict.candidates; track file.id) { <option [value]="file.id">{{ file.name }} · {{ formatSize(file.size) }} · {{ formatDate(file.updated_at) }} · {{ file.id.slice(0, 8) }}</option> }
+    </select></label>
+    <button hlmBtn type="button" variant="outline" [disabled]="!conflictTarget()" (click)="chooseUploadConflict('replace')">Auswahl ersetzen</button>
+    <button hlmBtn type="button" variant="outline" (click)="chooseUploadConflict('keep')">Beide behalten</button>
+    <button hlmBtn type="button" variant="outline" (click)="chooseUploadConflict('cancel')">Abbrechen</button>
+  }
+</dialog>
