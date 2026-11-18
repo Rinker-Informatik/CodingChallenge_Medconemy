@@ -44,18 +44,18 @@ export class ShareCommands {
     if (!user.is_admin && user.id === input.userId) fail(400, 'Eine Freigabe an das eigene Konto ist nicht möglich.');
     if (input.fileId && input.deleteFolders) fail(400, 'Ordnerlöschrecht nur für Ordner');
     const id = randomUUID();
-    const email = await this.db.transaction(async repo => {
+    const { email, name } = await this.db.transaction(async repo => {
       if (!user.is_admin) await this.checkScope(repo, user, input, input);
       const name = input.folderId ? (await repo.getFolder(input.folderId)).name : (await repo.getFile(input.fileId!)).name;
       const recipient = await repo.getUser(input.userId);
       if (!recipient) return fail(404, 'Nutzer nicht gefunden');
       await repo.insertShare(id, input, user.is_admin ? undefined : user.id);
       await repo.recordActivity(user.id, input.folderId ? 'folder' : 'file', input.folderId ?? input.fileId!, name, 'Freigabe erteilt');
-      return recipient.email;
+      return { email: recipient.email, name };
     });
     let notified = true;
     if (input.folderId) {
-      try { await this.notifier.folderShared(email, input.folderId); }
+      try { await this.notifier.folderShared(email, name); }
       catch (error) { notified = false; console.error('Mail failed', error); }
     }
     return { id, notified: input.folderId ? notified : null };

@@ -52,7 +52,7 @@ Für einen einzelnen SMTP-Test ohne Umstellung des laufenden Systems `src/backen
 npm --prefix src/backend run mail:test
 ```
 
-Der Test verschickt eine echte Nachricht mit dem Platzhalter „Testordner“ an `RESEND_TEST_TO`. Eine SMTP-Annahme bestätigt noch nicht die Zustellung im Posteingang. Der isolierte Mailpit-Integrationstest prüft zusätzlich, dass eine tatsächliche Ordnerfreigabe den Versand auslöst.
+Der Test verschickt eine echte Nachricht mit dem Platzhalter „Testordner“ an `RESEND_TEST_TO`. Eine SMTP-Annahme bestätigt noch nicht die Zustellung im Posteingang. Der isolierte Mailpit-Integrationstest prüft zusätzlich, dass eine tatsächliche Ordnerfreigabe den Versand auslöst und den Ordnernamen enthält.
 
 Um Resend für den Compose-Stack zu konfigurieren, `src/backend/.env` als zusätzliches `--env-file` und nach den regulären Compose-Dateien `-f deployment/compose.resend.yml` angeben. Benötigt die bestehende Konfiguration weitere Umgebungsdateien, müssen diese ebenfalls angegeben werden. Der Backend-Container muss mit der Änderung neu erstellt werden. Die `.env`-Datei und der API-Key dürfen nicht in das Repository gelangen.
 

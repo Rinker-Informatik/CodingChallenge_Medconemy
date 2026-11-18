@@ -73,7 +73,7 @@ export interface ObjectStore {
   get(key: string): Promise<Buffer>;
   delete(key: string): Promise<void>;
 }
-export interface Notifier { folderShared(email: string, folderId: string): Promise<void> }
+export interface Notifier { folderShared(email: string, folderName: string): Promise<void> }
 export interface Credentials {
   hash(password: string): Promise<string>;
   verify(password: string, hash: string): Promise<boolean>;

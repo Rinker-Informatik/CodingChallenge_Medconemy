@@ -59,7 +59,7 @@ export class MailNotifier implements Notifier {
   async invite(email: string, link: string, reset = false) {
     await this.transport.sendMail({ from: this.config.from, to: email, subject: reset ? 'Passwort für Medconemy zurücksetzen' : 'Einladung zu Medconemy', text: `${reset ? 'Für dein Medconemy-Konto wurde ein Zurücksetzen des Passworts angefordert. Lege über diesen Link ein neues Passwort fest:' : 'Du wurdest zu Medconemy eingeladen. Lege dein Passwort über diesen Link fest:'}\n\n${link}\n\nDer Link ist 24 Stunden gültig und einmal verwendbar.` });
   }
-  async folderShared(email: string, folderId: string) {
-    await this.transport.sendMail({ from: this.config.from, to: email, subject: 'Bereich freigegeben', text: `Ein Ordnerbereich wurde für Sie freigegeben. Ordner-ID: ${folderId}` });
+  async folderShared(email: string, folderName: string) {
+    await this.transport.sendMail({ from: this.config.from, to: email, subject: 'Bereich freigegeben', text: `Der Ordner „${folderName}“ wurde für Sie freigegeben.` });
   }
 }

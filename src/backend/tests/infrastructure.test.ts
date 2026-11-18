@@ -45,11 +45,11 @@ test('mail adapter addresses the recipient and identifies the shared folder', as
   let message: Record<string, unknown> = {};
   let options: unknown;
   t.mock.method(nodemailer, 'createTransport', ((config: unknown) => { options = config; return ({ sendMail: async (input: Record<string, unknown>) => { message = input; } }); }) as unknown as typeof nodemailer.createTransport);
-  await new MailNotifier({ host: 'smtp.resend.com', port: 465, secure: true, requireTLS: false, from: 'sender@example.test', user: 'resend', password: 'key' }).folderShared('recipient@example.test', 'folder-id');
+  await new MailNotifier({ host: 'smtp.resend.com', port: 465, secure: true, requireTLS: false, from: 'sender@example.test', user: 'resend', password: 'key' }).folderShared('recipient@example.test', 'Projektunterlagen');
   assert.deepEqual(options, { host: 'smtp.resend.com', port: 465, secure: true, requireTLS: false, auth: { user: 'resend', pass: 'key' } });
   assert.equal(message.from, 'sender@example.test');
   assert.equal(message.to, 'recipient@example.test');
-  assert.match(String(message.text), /folder-id/);
+  assert.match(String(message.text), /Projektunterlagen/);
 });
 
 test('PostgreSQL adapter exposes repository operations and serializes transactions', async t => {

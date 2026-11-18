@@ -62,7 +62,8 @@ test('Freigabe eines Bereichs benachrichtigt den neuen Nutzer in Mailpit', { tim
   assert.ok(message, `Keine Mail für ${recipient} in Mailpit gefunden`);
   const detail = await jsonRequest(`${mail}/api/v1/message/${encodeURIComponent(message.ID)}`);
   assert.equal(detail.Subject, 'Bereich freigegeben');
-  assert.match(detail.Text, new RegExp(folder.id));
+  assert.match(detail.Text, /Integrationstest/);
+  assert.ok(!detail.Text.includes(folder.id));
   assert.ok(detail.To.some(to => to.Address.toLowerCase() === recipient.toLowerCase()));
 });
 

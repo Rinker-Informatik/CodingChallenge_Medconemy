@@ -256,7 +256,7 @@ test('share commands enforce admin access, notify on folders and revoke shares',
   let exists = true;
   let saved = false;
   const repo: Partial<Repository> = {
-    getFolder: async id => ({ id, name: 'folder', parent_id: null, owner_id: user.id }),
+    getFolder: async id => ({ id, name: 'Projektunterlagen', parent_id: null, owner_id: user.id }),
     getFile: async () => otherFile,
     getUser: async () => exists ? user : undefined,
     insertShare: async () => { saved = true; },
@@ -271,7 +271,7 @@ test('share commands enforce admin access, notify on folders and revoke shares',
   assert.equal(saved, false);
   exists = true;
   assert.equal((await commands.grantShare(admin, { ...base, folderId: 'folder' })).notified, true);
-  assert.deepEqual(notifications, ['user@example.test:folder']);
+  assert.deepEqual(notifications, ['user@example.test:Projektunterlagen']);
   assert.equal((await commands.grantShare(admin, { ...base, fileId: 'file' })).notified, null);
   await assert.rejects(commands.revokeShare(user, 'id'), { status: 403 });
   await commands.revokeShare(admin, 'id');
