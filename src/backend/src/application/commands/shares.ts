@@ -45,17 +45,11 @@ export class ShareCommands {
     if (input.fileId && input.deleteFolders) fail(400, 'Ordnerlöschrecht nur für Ordner');
     const id = randomUUID();
     const email = await this.db.transaction(async repo => {
-      let name: string;
-      if (user.is_admin) {
-        name = input.folderId ? (await repo.getFolder(input.folderId)).name : (await repo.getFile(input.fileId!)).name;
-      } else {
-        await this.checkScope(repo, user, input, input);
-        name = input.folderId ? (await repo.getFolder(input.folderId)).name : (await repo.getFile(input.fileId!)).name;
-      }
+      if (!user.is_admin) await this.checkScope(repo, user, input, input);
+      const name = input.folderId ? (await repo.getFolder(input.folderId)).name : (await repo.getFile(input.fileId!)).name;
       const recipient = await repo.getUser(input.userId);
       if (!recipient) return fail(404, 'Nutzer nicht gefunden');
-      if (user.is_admin) await repo.insertShare(id, input);
-      else await repo.insertShare(id, input, user.id);
+      await repo.insertShare(id, input, user.is_admin ? undefined : user.id);
       await repo.recordActivity(user.id, input.folderId ? 'folder' : 'file', input.folderId ?? input.fileId!, name, 'Freigabe erteilt');
       return recipient.email;
     });

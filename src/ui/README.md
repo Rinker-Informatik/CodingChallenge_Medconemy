@@ -14,15 +14,15 @@ Für die Frontend-Entwicklung in `src/ui` mit Node.js 22 ab 22.12 `npm ci` und `
 
 Die Übersicht zeigt direkt freigegebene und eigene Dateien auch ohne sichtbaren Elternordner. Die API liefert für einen nicht sichtbaren Pfad `folder_id: null` beziehungsweise `parent_id: null`. Alle Änderungen werden vom Backend autorisiert.
 
-Unter **Verwaltung → Nutzerverwaltung → Verwalten** können Admins Konten als **Intern** oder **Extern** kennzeichnen. Bestehende Konten ohne Zuordnung werden entsprechend angezeigt. Der Kontotyp ändert die Zugriffsrechte nicht. Auf derselben Seite lassen sich direkte Freigaben für Ordner und Dateien auflisten, hinzufügen, ändern und widerrufen. Die Stufen sind Lesen, Hochladen und eigene Dateien bearbeiten sowie Schreiben. Dateilöschung und Ordnerlöschung sind separat wählbar. Ordnerfreigaben wirken auf Nachfahren. Der separate Widerruf per Freigabe-ID steht weiterhin zur Verfügung.
+Unter **Verwaltung → Nutzerverwaltung → Verwalten** können Admins Konten als **Intern** oder **Extern** kennzeichnen. Bestehende Konten ohne Zuordnung werden entsprechend angezeigt. Interne Konten dürfen Freigaben im Rahmen ihrer eigenen Rechte verwalten; externe Konten dürfen keine Freigaben verwalten. Auf derselben Seite lassen sich direkte Freigaben für Ordner und Dateien auflisten, hinzufügen, ändern und widerrufen. Die Stufen sind Lesen, Hochladen und eigene Dateien bearbeiten sowie Schreiben. Dateilöschung und Ordnerlöschung sind separat wählbar. Ordnerfreigaben wirken auf Nachfahren. Der separate Widerruf per Freigabe-ID steht weiterhin zur Verfügung.
 
 ## Dateiinformationen
 
-Das Info-Symbol zeigt Ersteller, letzte Änderung und Inhaltsversion. Eine neue Datei beginnt bei Version 1; beim Ersetzen oder Bearbeiten des Inhalts steigt die Nummer. Umbenennen und Verschieben ändern das Änderungsdatum, aber nicht die Inhaltsversion. Frühere Inhalte werden nicht archiviert. Bei älteren Dateien stehen historische Angaben, die nicht gespeichert wurden, als nicht verfügbar; ihre Inhaltszählung beginnt mit der ersten Änderung nach Einführung der Funktion.
+Das Info-Symbol zeigt Ersteller, letzte Änderung und Inhaltsversion. Eine neue Datei beginnt bei Version 1; beim Ersetzen oder Bearbeiten des Inhalts steigt die Nummer. Umbenennen und Verschieben ändern das Änderungsdatum, aber nicht die Inhaltsversion. Frühere Inhalte werden als Dateiversionen gespeichert und können über den Versionsverlauf heruntergeladen oder wiederhergestellt werden. Bei älteren Dateien stehen historische Angaben, die nicht gespeichert wurden, als nicht verfügbar; ihre Inhaltszählung beginnt mit der ersten Änderung nach Einführung der Funktion.
 
 ## Textdateien bearbeiten
 
-TXT-Dateien in UTF-8 lassen sich über **Aktionen → Text bearbeiten** öffnen und speichern, wenn das Konto die Datei bearbeiten darf. Es gilt das Dateilimit von 10 MiB. Änderungen anderer Personen können beim Speichern überschrieben werden.
+TXT-Dateien in UTF-8 lassen sich über **Aktionen → Text bearbeiten** öffnen und speichern, wenn das Konto die Datei bearbeiten darf. Es gilt das Dateilimit von 10 MiB. Während der Bearbeitung schützt eine zeitlich begrenzte, regelmäßig erneuerte Sperre vor konkurrierenden Änderungen über die Anwendung. Läuft die Sperre ab, muss die Datei erneut geöffnet werden.
 
 ## Dateien ziehen und ablegen
 

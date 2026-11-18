@@ -122,6 +122,7 @@ export class OfficeSessions {
     const session = this.lookup(id);
     if (session.state.status === 'saved' || session.state.status === 'unchanged') return;
     if (session.state.status !== 'editing') return fail(409, 'Editorsitzung wurde bereits verarbeitet.');
+    // ONLYOFFICE status 2 supplies a finished document; 4 means the session ended unchanged.
     switch (event.status) {
       case 1: return;
       case 4: session.state = { status: 'unchanged' }; await this.release(session).catch(console.error); return;

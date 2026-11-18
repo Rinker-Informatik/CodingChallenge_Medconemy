@@ -137,6 +137,8 @@ class PostgresRepository implements Repository {
         for (const key of Object.keys(effective) as Array<keyof Rights>) effective[key] ||= requested[key];
         continue;
       }
+      // Delegated rights remain valid only while the grantor still has those rights.
+      // Track the current share path to stop cyclic delegations from granting access.
       const grantor = await this.getUser(share.granted_by);
       if (!grantor || grantor.is_active === false || (!grantor.is_admin && grantor.account_type !== 'internal')) continue;
       const path = new Set(visited).add(share.id);

@@ -31,6 +31,7 @@ export interface Repository extends ReadRepository {
   acquireFileLock(fileId: string, userId: string, token: string): Promise<boolean>;
   renewFileLock(fileId: string, userId: string, token: string): Promise<boolean>;
   releaseFileLock(fileId: string, userId: string, token: string): Promise<void>;
+  // Without a token, succeeds only when no active lock exists; with one, it must match the owner and token.
   fileLockMatches(fileId: string, userId: string, token?: string): Promise<boolean>;
   createUser(id: string, email: string, hash: string, admin: boolean, accountType?: AccountType): Promise<void>;
   setAccountType(id: string, accountType: AccountType): Promise<boolean>;

@@ -474,12 +474,7 @@ export class App {
     const action = this.action();
     if (action?.kind !== 'versions') return;
     return this.run(async () => {
-      const url = URL.createObjectURL(await this.api.download(action.file, version.id));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = action.file.name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await this.downloadFile(action.file, version.id);
     }, this.dialogError);
   }
 
@@ -700,13 +695,15 @@ export class App {
   }
 
   protected download(file: StoredFile) {
-    return this.run(async () => {
-      const url = URL.createObjectURL(await this.api.download(file));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = file.name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    });
+    return this.run(() => this.downloadFile(file));
+  }
+
+  private async downloadFile(file: StoredFile, versionId?: string) {
+    const url = URL.createObjectURL(await this.api.download(file, versionId));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = file.name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }
