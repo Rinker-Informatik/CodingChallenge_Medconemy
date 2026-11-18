@@ -14,7 +14,8 @@
             "index": "src/index.html",
             "tsConfig": "tsconfig.app.json",
             "styles": ["src/styles.css"],
-            "outputPath": "dist/medconemy"
+            "outputPath": "dist/medconemy",
+            "outputHashing": "all"
           },
           "configurations": {
             "development": { "optimization": false, "sourceMap": true }
